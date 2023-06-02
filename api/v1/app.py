@@ -1,49 +1,43 @@
 #!/usr/bin/python3
-""" Flask Application """
+"""Entry point of the api"""
+from flask import Flask
+from flask_cors import CORS
+from flask import make_response
+from flask import jsonify
 from models import storage
 from api.v1.views import app_views
-from os import environ
-from flask import Flask, render_template, make_response, jsonify
-from flask_cors import CORS
-from flasgger import Swagger
-from flasgger.utils import swag_from
+import os
+#from os import getenv
+
 
 app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+app.url_map.strict_slashes = False
 app.register_blueprint(app_views)
-cors = CORS(app, resources={r"/*": {"origins": "0.0.0.0"}})
+cors = CORS(app, resources={r"/api/*": {"origins": "0.0.0.0"}})
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+host = os.environ.get('HBNB_API_HOST', '0.0.0.0')
+port = os.environ.get('HBNB_API_PORT', '5000')
 
+storage.reload()
 
 @app.teardown_appcontext
-def close_db(error):
-    """ Close Storage """
+def close_storage(exception=None):
+    """Calls storage.close()"""
     storage.close()
 
 
 @app.errorhandler(404)
 def not_found(error):
-    """ 404 Error
-    ---
-    responses:
-      404:
-        description: a resource was not found
-    """
-    return make_response(jsonify({'error': "Not found"}), 404)
+    """handles 404 erros"""
+    return make_response(jsonify({'error': 'Not found'}), 404)
 
-app.config['SWAGGER'] = {
-    'title': 'AirBnB clone Restful API',
-    'uiversion': 3
-}
+"""
+@app.errorhandler(400)
+def bad_request(error):
+    return error.description
+    #if error.description == 'Not a JSON':
+        #return make_response(jsonify({'error': 'Not a JSON'}), 400)
+"""
 
-Swagger(app)
-
-
-if __name__ == "__main__":
-    """ Main Function """
-    host = environ.get('HBNB_API_HOST')
-    port = environ.get('HBNB_API_PORT')
-    if not host:
-        host = '0.0.0.0'
-    if not port:
-        port = '5000'
-    app.run(host=host, port=port, threaded=True)
+if __name__ == '__main__':
+    app.run(host=host, port=port, threaded=True, debug=True)
